@@ -312,6 +312,43 @@ app.post("/api/messages/:userId", auth, async (req, res) => {
   }
 });
 
+
+// ADMIN PANEL API
+const ADMIN_USER_ID = Number(process.env.ADMIN_USER_ID || 0);
+
+function adminOnly(req, res, next) {
+  if (!ADMIN_USER_ID || Number(req.user.id) !== ADMIN_USER_ID) {
+    return res.status(403).json({ error: "Admin ruxsati yo'q" });
+  }
+  next();
+}
+
+app.get("/api/admin/stats", auth, adminOnly, async (req, res) => {
+  try {
+    const users = await pool.query("SELECT COUNT(*) FROM users");
+    const messages = await pool.query("SELECT COUNT(*) FROM messages");
+    res.json({
+      users: Number(users.rows[0].count),
+      messages: Number(messages.rows[0].count)
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Statistika xatosi" });
+  }
+});
+
+app.get("/api/admin/users", auth, adminOnly, async (req, res) => {
+  try {
+    const result = await pool.query(
+      "SELECT id,username,email,created_at FROM users ORDER BY id DESC LIMIT 100"
+    );
+    res.json({ users: result.rows });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Foydalanuvchilarni olish xatosi" });
+  }
+});
+
 // Ma'lumotlar bazasini tayyorlash
 async function start() {
   await pool.query(`
